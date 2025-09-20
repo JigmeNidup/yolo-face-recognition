@@ -1,6 +1,13 @@
+python3 -m venv venv --system-site-packages
+
+source ./venv/bin/activate
+
 sudo apt update
 sudo apt install python3-pil python3-pil.imagetk
-pip3 install opencv-python-headless
-pip3 install face_recognition
-pip3 install ultralytics
+pip3 install "numpy<2.0" opencv-python-headless
+
+pip install "numpy<2.0" ultralytics
 pip3 install picamera2
+pip3 install face_recognition
+
+

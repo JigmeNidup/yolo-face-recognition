@@ -1,0 +1,5 @@
+pip install ultralytics opencv-python
+
+pip install ultralytics face-recognition opencv-python
+
+pip install flask

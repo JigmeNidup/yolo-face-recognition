@@ -7,7 +7,6 @@ sudo apt install python3-pil python3-pil.imagetk
 pip3 install "numpy<2.0" opencv-python-headless
 
 pip install "numpy<2.0" ultralytics
-pip3 install picamera2
-pip3 install face_recognition
 
+pip install --no-binary :all: face_recognition
 

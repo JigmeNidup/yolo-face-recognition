@@ -12,7 +12,7 @@ import numpy as np
 # Paths
 DATA_FILE = "faces_db.pkl"
 
-# Load YOLO model
+# Load YOLO model (optional, just for face detection)
 model = YOLO("./models/yolov8n.pt")
 
 # Load face database
@@ -24,21 +24,32 @@ else:
 
 # Initialize Pi Camera
 picam2 = Picamera2()
-config = picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)})
+config = picam2.create_preview_configuration(main={"format": "RGB888", "size": (1640, 1232)})  # full FOV
 picam2.configure(config)
 picam2.start()
 
-# Tkinter GUI setup
+# Tkinter GUI
 root = tk.Tk()
-root.title("YOLO + Face Recognition")
-root.geometry("800x480")  # 7-inch screen resolution
+root.title("Face Recognition App")
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+root.geometry(f"{screen_width}x{screen_height}+0+0")
 root.resizable(False, False)
 
 # Canvas for video
-canvas = tk.Canvas(root, width=640, height=480)
-canvas.pack()
+canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg="black", highlightthickness=0)
+canvas.pack(fill="both", expand=True)
 
-# Face recognition functions
+# Register button top-right overlapping video
+register_btn = tk.Button(
+    root, text="Register Face", command=lambda: on_register(),
+    font=("Arial", 16), bg="#3498db", fg="white"
+)
+register_btn.place(relx=1.0, x=-20, y=20, anchor="ne")
+
+# =====================
+# Face Recognition Functions
+# =====================
 def register_face(frame, name):
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     locations = face_recognition.face_locations(rgb)
@@ -49,9 +60,10 @@ def register_face(frame, name):
         face_db[name].append(encodings[0])
         with open(DATA_FILE, "wb") as f:
             pickle.dump(face_db, f)
-        messagebox.showinfo("Registration", f"Face registered for {name}")
+        # Optional: overlay message instead of blocking messagebox
+        print(f"Face registered for {name}")
     else:
-        messagebox.showwarning("Warning", "No face detected to register!")
+        print("No face detected to register!")
 
 def recognize_faces(frame):
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -68,7 +80,6 @@ def recognize_faces(frame):
         names.append((name, loc))
     return names
 
-# Register button callback
 def on_register():
     name = simpledialog.askstring("Register Face", "Enter name:")
     if name:
@@ -76,37 +87,32 @@ def on_register():
         if frame is not None:
             register_face(frame, name)
 
-# Get frame from Pi camera
 def get_frame():
     frame = picam2.capture_array()
     return True, frame
 
+# =====================
 # Update loop
+# =====================
 def update_frame():
     ret, frame = get_frame()
     if ret:
-        # Recognize faces
         recognized = recognize_faces(frame)
-
-        # Draw rectangles and names
         for name, (top, right, bottom, left) in recognized:
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
             cv2.putText(frame, name, (left, top - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        # Convert for Tkinter
+        # Convert to Tkinter image
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(img)
+        img = img.resize((screen_width, screen_height))  # scale video to fit window
         imgtk = ImageTk.PhotoImage(image=img)
         canvas.imgtk = imgtk
         canvas.create_image(0, 0, anchor=tk.NW, image=imgtk)
-    
-    root.after(30, update_frame)  # ~30 FPS
 
-# Buttons
-register_btn = tk.Button(root, text="Register Face", command=on_register, font=("Arial", 16), bg="#3498db", fg="white")
-register_btn.place(x=660, y=50, width=120, height=50)
+    root.after(30, update_frame)
 
-# Start updating frames
+# Start loop
 update_frame()
 root.mainloop()
